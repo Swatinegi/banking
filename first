@@ -1,0 +1,337 @@
+import time 
+import pymysql
+import numbers
+con=pymysql.connect("localhost","root","","banking")
+cur=con.cursor()
+
+#main menu function here 
+def menu():
+    print ("Welcome to the Python Bank System")
+    print (" ")
+    print ("Your Options Are:")
+    print ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print ("1) signUp(New customer)")
+    print ("2) signIn(existing customer)")
+    print ("3) admin sign In")
+    print ("4) delete the account")
+    print ("5) Quit Python Bank System.pyw")
+    print
+    return input ("Choose your option: ")
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+#sign up function here
+def signup():
+    ws=0
+    hid=0
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    fname=input("enter first name")
+    ws=ws+1
+    lname=input("enter last name")
+    ws=ws+1
+    pincode=input("enter pincode")
+    try:
+        pincode=int(pincode)
+        ws=ws+1
+        city=input("enter city")
+        ws=ws+1
+        state=input("enter state")
+        ws=ws+1
+        gender=input("enter gender")
+        ws=ws+1
+        moblieno=input("enter moblie no")
+        try:
+            moblieno=int(moblieno)
+            ws=ws+1
+            bal=input("enter balance")
+            try:
+                bal=int(bal)
+                ws=ws+1
+                paswrd=input("enter valid password")
+                ws=ws+1
+                addr=input("enter address")
+                ws=ws+1
+                date=time.strftime("%x")
+                ws=ws+1
+                acctype=input("enter the type of your account")
+                if((acctype== "current") & (acctype== "saving")):
+                    ws=ws+1
+                    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                    bal=int(bal)
+                    if(type=='current'):
+                        if(bal<5000):
+                            print("enter more than 5000")
+                            signup()
+                    if(ws==12):
+                        cur.execute("insert into customer values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",(['lastid',fname,lname,pincode,city,state,gender,moblieno,bal,paswrd,addr,hid]))
+                        lastid=cur.lastrowid
+                        lastid=str(lastid)
+                        con.commit()
+                        cur.execute("insert into account values(%s,%s,%s,%s,%s,%s)",([lastid,date,acctype,bal,ws,hid]))
+                        con.commit()
+                        con.close()
+                else:
+                    print("enter valid account type either saving or current")
+            except:
+                print("enter valid balance amount")
+        except:
+            print("enter valid moblie no")
+    except:
+        print("enter valid pincode")   
+#sign in function here
+def signin(c):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    c=c+1
+    Username = input('Accountno: ')
+    Password = input('Password: ')
+    if(c>3):
+        print("account was blocked")
+    else:
+        cur.execute('SELECT * from Customer WHERE accno="%s"' % (Username))
+        if cur.fetchone() is not None:
+            print ("account number correct")
+            cur.execute('SELECT * from Customer WHERE password="%s"' % (Password))
+            if cur.fetchone() is not None:
+                print("password correct")
+                subsignin(Username)
+            else:
+                if(c<4):
+                    #print ("Login failed")
+                    signin(c)
+                if(c==4):
+                    print("reached maximum login limit")                   
+        else:
+            print("accno not valid")            
+    con.close()     
+#administration function here    
+def admin(d):
+    username=input("enter admin username")
+    password=input("enter admin password")
+    d=d+1
+    if(d>3):
+        print("maximum limit reach")
+    else:
+        cur.execute('SELECT * from admin WHERE username="%s" AND password="%s"' % (username, password))
+        if cur.fetchone() is not None:
+            print("!!!You logged in as administrator!!!")
+            cur.execute('select * from customer where hidden != 0')
+            c=cur.fetchall()
+            for i in c:
+                for j in i:
+                    print(j,end=' ')
+                print('\n')
+            n=input("do you want to logout from admin press1")
+            if(n=="1"):
+                print("successfully loggedout  from admin")
+                menu()
+        else:
+            while(d<3):
+                print ("Login failed")
+                admin(d)
+            if(d==3):
+                print("reached maximum login limit")
+                menu()   
+#delete the account
+def dele():
+    Username=input("enter the account number you want to delete")
+    accountclosure(Username)
+    print("account deleted")
+
+    
+    
+#menu for sign in here
+def subsignin(Username):
+    l=1
+    while(l==1):
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print("1.Address change ")
+        print("2.Money Deposit")
+        print("3. Money withdraw")
+        print("4.Print Statement ")
+        print("5. Transfer Money")
+        print("6. Account Closure")
+        print("7. Customer logout ")
+        n=input("What you want to do with your account!!")
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if n == "1":
+            addresschange(Username)   
+        elif n == "2":
+            moneydeposit(Username)
+        elif n == "3":
+            moneywithdraw(Username)
+        elif n == "4":
+            printstatement(Username)
+        elif n == "5":
+            transfermoney(Username)
+        elif n == "6":
+            accountclosure(Username)
+        elif n == "7":  
+            l=0    
+            customerlogout()  
+
+
+#to change the address 
+def addresschange(Username):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    #Username=input("enter account id")
+    cur.execute('select * from customer where accno=%s AND hidden != 1',(Username))
+    if cur.fetchone() is not None:
+        state=input("enter changed state")
+        city=input("enter changed city")
+        pincode=input("enter changed pincode")
+        
+        try:
+            pincode=int(pincode)
+            cur.execute('UPDATE customer SET city=%s,state=%s,pincode=%s WHERE accno=%s AND hidden != 1',(city,state,pincode,Username))
+            con.commit()
+            print("address changed")
+            con.close()
+        except:
+            print("enter valid pincode")
+    else:
+        print("cloure remove this action for this account number")
+#to deposit the money
+def moneydeposit(Username):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    #Username=input("enter account id")
+    cur.execute('select * from customer where hidden != 1')
+    if cur.fetchone() is not None:
+        bal=cur.execute('select balance from account where accno=%s AND hidden != 1',(Username))
+        bal=cur.fetchall()
+        bal=int(bal[0][0])
+        DepositAmount=input("Enter The Deposit Amount: ")
+        DepositAmount=int(DepositAmount)
+        DepositAmount=DepositAmount+bal
+        cur.execute('UPDATE account SET balance=%s WHERE accno=%s',(DepositAmount, Username))
+        con.commit()
+        cur.execute('UPDATE customer SET balance=%s WHERE accno=%s',(DepositAmount, Username))
+        con.commit()
+        print("money deposit successfully done")
+        con.close()  
+    else:
+        print("cloure remove this action for this account number")
+   
+#to withdraw money
+def moneywithdraw(Username):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    #Username=input("enter account id")
+    amt=input("enter the amount to withdraw")
+    amt=int(amt)
+    cur.execute('select * from customer where hidden !=1')
+    if cur.fetchone() is not None:
+        cur.execute('select balance from account where accno=%s AND hidden != 1',(Username))
+        bal=cur.fetchall()
+        bal=int(bal[0][0])
+        ty=cur.execute('select type from account where accno=%s',(Username))
+        ty=cur.fetchall()
+        ty=ty[0][0]
+        if(ty=='current'):
+            if(bal>=5000):
+                if(bal>amt):
+                    bal=bal-amt
+                else:
+                    print("balance is less than withdraw amount")                
+            else:
+                print("balance less than 5000!!") 
+        elif(ty=='saving'):
+            if(bal>amt):
+                bal=bal-amt
+            else:
+                print("balance is less than withdraw amount")
+        else:
+            print("type either a saving or current")   
+        cur.execute('UPDATE account SET balance=%s WHERE accno=%s',(bal, Username))
+        con.commit()
+        cur.execute('UPDATE customer SET balance=%s WHERE accno=%s',(bal, Username))
+        con.commit()
+        print("withdraw successfull")
+        con.close()
+    else:
+        print("cloure remove this action for this account number")
+
+#for printing statements
+def printstatement(ac1):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    b=cur.execute('SELECT accno FROM account where accno=%s',(ac1))
+    b=cur.fetchall()
+    b=int(b[0][0])
+    print("account number is",b)
+    b=cur.execute('SELECT balance FROM account where accno=%s',(ac1))
+    b=cur.fetchall()
+    b=int(b[0][0])
+    print("balance is",b)
+    
+#to transfer the money    
+def transfermoney(ac1):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    money=input("enter money to transfer")
+    ac2=input("enter account id to transfer")
+    cur.execute('select * from customer where hidden != 1 AND accno=%s',(ac1))
+    if cur.fetchone() is not None:
+        bal1=cur.execute('SELECT balance from account where accno=%s ',(ac1))
+        bal1=cur.fetchall()
+        bal1=int(bal1[0][0])
+        bal2=cur.execute('SELECT balance from account where accno =%s',(ac2))
+        bal2=cur.fetchall()
+        bal2=int(bal2[0][0])
+        money=int(money)
+        if(money<=bal1):
+            bal1=(bal1)-(money)
+            bal1=int(bal1)
+            cur.execute('UPDATE account SET balance=%s WHERE accno =%s',(bal1,ac1))
+            con.commit()
+            cur.execute('UPDATE customer SET balance=%s WHERE accno =%s',(bal1,ac1))
+            con.commit()
+            bal2=int(bal2)+int(money)
+            cur.execute('UPDATE account SET balance=%s WHERE accno =%s',(bal2,ac2))
+            con.commit()
+            cur.execute('UPDATE customer SET balance=%s WHERE accno =%s',(bal2,ac2))
+            con.commit()
+            print("money transfer successful")
+        else:
+            print("money to be transferred is larger than balance in the account.")
+    else:
+        print("cloure remove this action for this account number")
+
+#for account closure
+def accountclosure(ac1):
+    con=pymysql.connect("localhost","root","","banking")
+    cur=con.cursor()
+    bal1=cur.execute('SELECT balance from account where accno=%s',(ac1))
+    bal1=cur.fetchall()
+    bal1=int(bal1[0][0])
+    print("balance ", bal1)
+    cur.execute('UPDATE account SET hidden = 1 WHERE accno=%s',(ac1))
+    con.commit()
+    cur.execute('UPDATE customer SET hidden = 1 WHERE accno=%s',(ac1))
+    con.commit()
+
+#for customer logout
+def customerlogout():
+    print("~~~~~~You logout successfully.Hope you enjoy IT!!~~~~~~")
+    menu()
+    
+loop = 1
+choice = 0
+c=0
+d=0
+while loop == 1:
+    choice = menu()
+    if choice == "1":
+        signup()       
+    elif choice == "2":
+        signin(c)
+    elif choice == "3":
+        admin(d)
+    elif choice == "4":
+        dele()
+    elif choice=="5":
+        loop = 0
+print ("***Thank You***")
